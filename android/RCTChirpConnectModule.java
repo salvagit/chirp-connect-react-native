@@ -1,9 +1,18 @@
+//
+//  RCTChirpConnectPackage.java
+//  ChirpConnect
+//
+//  Created by Joe Todd on 05/03/2018.
+//  Copyright © 2018 Asio Ltd. All rights reserved.
+//
+
 package com.chirpconnect.rctchirpconnect;
 
 import java.util.Map;
 import java.util.HashMap;
 
 import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -109,7 +118,9 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
 
             @Override
             public void onSystemVolumeChanged(int oldVolume, int newVolume) {
-                // TODO: Implement
+                WritableMap params = Arguments.createMap();
+                params.putInt("volume", newVolume);
+                context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("onVolumeChanged", params);
             }
         });
     }
@@ -139,11 +150,29 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void sendRandom() {
-        long maxSize = chirpConnect.getMaxPayloadLength();
-        byte[] payload = chirpConnect.randomPayload(maxSize);
+    public void send(ReadableArray data) {
+        byte[] payload = new byte[data.size()];
+        for (int i = 0; i < data.size(); i++) {
+            payload[i] = (byte)data.getInt(i);
+        }
 
+        long maxSize = chirpConnect.getMaxPayloadLength();
         if (maxSize < payload.length) {
+            onError(context, "Invalid payload");
+            return;
+        }
+        ChirpError error = chirpConnect.send(payload);
+        if (error.getCode() > 0) {
+            onError(context, error.getMessage());
+        }
+    }
+
+    @ReactMethod
+    public void sendRandom(Integer length) {
+        long payloadLength = length == 0 ? chirpConnect.getMaxPayloadLength() : length;
+        byte[] payload = chirpConnect.randomPayload(payloadLength);
+
+        if (payloadLength < payload.length) {
             onError(context, "Invalid payload");
             return;
         }

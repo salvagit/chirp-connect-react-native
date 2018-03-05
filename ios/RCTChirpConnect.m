@@ -34,7 +34,8 @@ RCT_EXPORT_MODULE();
      @"onSent",
      @"onReceiving",
      @"onReceived",
-     @"onError"
+     @"onError",
+     @"onVolumeChanged"
   ];
 }
 
@@ -72,6 +73,15 @@ RCT_EXPORT_METHOD(init:(NSString *)key secret:(NSString *)secret)
   {
     NSString *payload = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
     [self sendEventWithName:@"onReceived" body:@{@"data": payload}];
+  }];
+  [sdk setSystemVolumeChangedBlock:^(float volume) {
+    [self sendEventWithName:@"onVolumeChanged" body:@{@"volume": [NSNumber numberWithInt:volume * 100]}];
+  }];
+
+  [sdk setAuthenticationStateUpdatedBlock:^(NSError * _Nullable error) {
+    if (error) {
+      [self sendEventWithName:@"onError" body:@{@"message": [error localizedDescription]}];
+    }
   }];
 }
 
@@ -119,9 +129,14 @@ RCT_EXPORT_METHOD(stop)
  *
  * Sends a payload of NSData to the speaker.
  */
-RCT_EXPORT_METHOD(send: (NSData *)data)
+RCT_EXPORT_METHOD(send: (NSArray *)data)
 {
-  NSError *err = [sdk send:data];
+  Byte bytes[[data count]];
+  for (int i = 0; i < [data count]; i++) {
+    bytes[i] = [[data objectAtIndex:i] integerValue];
+  }
+  NSData *payload = [[NSData alloc] initWithBytes:bytes length:[data count]];
+  NSError *err = [sdk send:payload];
   if (err) {
     [self sendEventWithName:@"onError" body:@{@"message": [err localizedDescription]}];
   }
@@ -132,9 +147,10 @@ RCT_EXPORT_METHOD(send: (NSData *)data)
  *
  * Sends a random payload to the speaker.
  */
-RCT_EXPORT_METHOD(sendRandom)
+RCT_EXPORT_METHOD(sendRandom: (NSInteger)length)
 {
-  NSData *data = [sdk randomPayloadWithLength:[sdk maxPayloadLength]];
+  NSInteger payloadLength = length ? length : [sdk maxPayloadLength];
+  NSData *data = [sdk randomPayloadWithLength:payloadLength];
   NSError *err = [sdk send:data];
   if (err) {
     [self sendEventWithName:@"onError" body:@{@"message": [err localizedDescription]}];
