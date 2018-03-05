@@ -32,41 +32,32 @@ export default class App extends Component<{}> {
 
     this.onStateChanged = ChirpConnectEmitter.addListener(
       'onStateChanged',
-      (body) => {
-        if (body.status === ChirpConnect.CHIRP_CONNECT_STATE_STOPPED) {
+      (event) => {
+        if (event.status === ChirpConnect.CHIRP_CONNECT_STATE_STOPPED) {
           this.setState({ status: 'Stopped' });
-        } else if (body.status === ChirpConnect.CHIRP_CONNECT_STATE_PAUSED) {
+        } else if (event.status === ChirpConnect.CHIRP_CONNECT_STATE_PAUSED) {
           this.setState({ status: 'Paused' });
-        } else if (body.status === ChirpConnect.CHIRP_CONNECT_STATE_RUNNING) {
+        } else if (event.status === ChirpConnect.CHIRP_CONNECT_STATE_RUNNING) {
           this.setState({ status: 'Running' });
-        } else if (body.status === ChirpConnect.CHIRP_CONNECT_STATE_SENDING) {
+        } else if (event.status === ChirpConnect.CHIRP_CONNECT_STATE_SENDING) {
           this.setState({ status: 'Sending' });
-        } else if (body.status === ChirpConnect.CHIRP_CONNECT_STATE_RECEIVING) {
+        } else if (event.status === ChirpConnect.CHIRP_CONNECT_STATE_RECEIVING) {
           this.setState({ status: 'Receiving' });
         }
       }
     );
-    this.onSending = ChirpConnectEmitter.addListener(
-      'onSending',
-      (body) => {
-        if (body.data) {
-          this.setState({ data: body.data });
-        }
-      }
-    );
+
     this.onReceived = ChirpConnectEmitter.addListener(
       'onReceived',
-      (body) => {
-        if (body.data) {
-          this.setState({ data: body.data });
+      (event) => {
+        console.warn(event)
+        if (event.data) {
+          this.setState({ data: event.data });
         }
       }
     )
     const onError = ChirpConnectEmitter.addListener(
-      'onError',
-      (body) => {
-        console.warn(body.message);
-      }
+      'onError', (event) => { console.warn(event.message) }
     )
 
     ChirpConnect.init(key, secret);
@@ -76,7 +67,6 @@ export default class App extends Component<{}> {
 
   componentWillUnmount() {
     this.onStateChanged.remove();
-    this.onSending.remove();
     this.onReceived.remove();
     this.onError.remove();
   }
