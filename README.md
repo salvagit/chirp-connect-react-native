@@ -8,21 +8,21 @@ Under the Building Projects with Native Code tab.
 ## iOS
 
 Open the xcode project in the `/ios` folder, and build first of all.
-See Troubleshooting section.
+See [Troubleshooting](https://github.com/chirp/chirp-connect-react-native/#troubleshooting) section.
 
 Then follow Steps 1 - 3 at [Getting Started [iOS]](https://developers.chirp.io/connect/getting-started/ios/) to include the Chirp Connect SDK into your project.
 
-Copy `RCTChirpConnect.m` and `RCTChirpConnect.h` to your project.
+Copy [RCTChirpConnect.m](https://github.com/chirp/chirp-connect-react-native/blob/master/ios/RCTChirpConnect.m) and [RCTChirpConnect.h](https://github.com/chirp/chirp-connect-react-native/blob/master/ios/RCTChirpConnect.h) to your project.
 
 
 ## Android
 
 Open the `/android` folder in Android Studio, and check the project builds.
-See Troubleshooting section.
+See [Troubleshooting](https://github.com/chirp/chirp-connect-react-native/#troubleshooting) section.
 
 Then follow Steps 1 - 2 at [Getting Started [Android]](https://developers.chirp.io/connect/getting-started/android/) to include the Chirp Connect SDK into your project.
 
-Copy `RCTChirpConnectModule.java` and `RCTChirpConnectPackage.java` to the project.
+Copy [RCTChirpConnectModule.java](https://github.com/chirp/chirp-connect-react-native/blob/master/android/RCTChirpConnectModule.java) and [RCTChirpConnectPackage.java](https://github.com/chirp/chirp-connect-react-native/blob/master/android/RCTChirpConnectModule.java) to the project.
 
 Import into your MainApplication.java
 
@@ -64,14 +64,14 @@ export default class App extends Component<{}> {
         }
       }
     )
-    const onError = ChirpConnectEmitter.addListener(
+    this.onError = ChirpConnectEmitter.addListener(
       'onError', (event) => { console.warn(event.message) }
     )
 
     ChirpConnect.init(key, secret);
     ChirpConnect.start();
 
-    ChirpConnect.sendRandom();
+    ChirpConnect.sendRandom(10);
   }
 
   componentWillUnmount() {
@@ -81,10 +81,62 @@ export default class App extends Component<{}> {
 }
 ```
 
+## Reference
+
+
+```javascript
+// Initialise the SDK.
+ChirpConnect.init(String key, String secret)
+
+// For Pro/Enterprise users, explicitly set the licence.
+ChirpConnect.setLicence(String licence)
+
+// Start the SDK
+ChirpConnect.start()
+
+// Stop the SDK
+ChirpConnect.stop()
+
+// Send an array of bytes to the speaker
+ChirpConnect.send(Array data)
+
+// Send a random array of bytes to the speaker
+ChirpConnect.sendRandom(Int length)
+
+// This event is called when the state of the SDK changes.
+// The event contains the following body, where the state constants are accessible from the ChirpConnect interface.
+// { "status": ChirpConnect.CHIRP_CONNECT_STATE_RUNNING }
+ChirpConnectEmitter.addListener('onStateChanged', (event) => {})
+
+// This event is called when the SDK begins sending data.
+// The event contains the following body.
+// { "data": [0, 1, 2, 3, 4] }
+ChirpConnectEmitter.addListener('onSending', (event) => {})
+
+// This event is called when the SDK has finished sending data.
+// The event contains the following body.
+// { "data": [0, 1, 2, 3, 4] }
+ChirpConnectEmitter.addListener('onSent', (event) => {})
+
+// This event is called when the SDK has started to receive data.
+ChirpConnectEmitter.addListener('onReceiving', () => {})
+
+// This event is called when the SDK has finished receiving data.
+// The event contains the following body.
+// { "data": [0, 1, 2, 3, 4] }
+ChirpConnectEmitter.addListener('onReceived', (event) => {})
+
+// This event is called if the SDK encounters an error.
+// The event contains the following body.
+// { "message": "An error has occurred" }
+ChirpConnectEmitter.addListener('onError', (event) => {})
+
+```
+
 
 ## TroubleShooting
 
-React Native with native support doesn't work well out of the box, so here
+React Native with native support doesn't work so well out of the box, so here
 are some things that can go wrong.
 
 ### iOS
@@ -115,4 +167,3 @@ add the following with recursive set.
     `export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_162.jdk/Contents/Home`
 
 - Upgrade gradle to 2.3.3 by updating `build.gradle`
-

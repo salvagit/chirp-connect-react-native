@@ -6,7 +6,6 @@
 //  Copyright © 2018 Asio Ltd. All rights reserved.
 //
 
-#import <Foundation/Foundation.h>
 #import "RCTChirpConnect.h"
 
 @implementation RCTChirpConnect
@@ -34,12 +33,11 @@ RCT_EXPORT_MODULE();
      @"onSent",
      @"onReceiving",
      @"onReceived",
-     @"onError",
-     @"onVolumeChanged"
+     @"onError"
   ];
 }
 
-/*
+/**
  * init()
  *
  * Initialise the SDK with an application key and secret.
@@ -55,27 +53,28 @@ RCT_EXPORT_METHOD(init:(NSString *)key secret:(NSString *)secret)
   {
     [self sendEventWithName:@"onStateChanged" body:@{@"status": [NSNumber numberWithInt:newState]}];
   }];
+
   [sdk setSendingBlock:^(NSData * _Nonnull data)
   {
-    NSString *payload = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
+    NSArray *payload = [self dataToArray: data];
     [self sendEventWithName:@"onSending" body:@{@"data": payload}];
   }];
+
   [sdk setSentBlock:^(NSData * _Nonnull data)
   {
-    NSString *payload = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
+    NSArray *payload = [self dataToArray: data];
     [self sendEventWithName:@"onSent" body:@{@"data": payload}];
   }];
+
   [sdk setReceivingBlock:^(void)
   {
     [self sendEventWithName:@"onReceiving" body:@{}];
   }];
+
   [sdk setReceivedBlock:^(NSData * _Nonnull data)
   {
-    NSString *payload = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
+    NSArray *payload = [self dataToArray: data];
     [self sendEventWithName:@"onReceived" body:@{@"data": payload}];
-  }];
-  [sdk setSystemVolumeChangedBlock:^(float volume) {
-    [self sendEventWithName:@"onVolumeChanged" body:@{@"volume": [NSNumber numberWithInt:volume * 100]}];
   }];
 
   [sdk setAuthenticationStateUpdatedBlock:^(NSError * _Nullable error) {
@@ -85,7 +84,7 @@ RCT_EXPORT_METHOD(init:(NSString *)key secret:(NSString *)secret)
   }];
 }
 
-/*
+/**
  * setLicence()
  *
  * Configure the SDK with a licence string.
@@ -98,7 +97,7 @@ RCT_EXPORT_METHOD(setLicence:(NSString *)licence)
   }
 }
 
-/*
+/**
  * start()
  *
  * Starts the SDK.
@@ -111,7 +110,7 @@ RCT_EXPORT_METHOD(start)
   }
 }
 
-/*
+/**
  * stop()
  *
  * Stops the SDK.
@@ -124,25 +123,21 @@ RCT_EXPORT_METHOD(stop)
   }
 }
 
-/*
+/**
  * send()
  *
  * Sends a payload of NSData to the speaker.
  */
 RCT_EXPORT_METHOD(send: (NSArray *)data)
 {
-  Byte bytes[[data count]];
-  for (int i = 0; i < [data count]; i++) {
-    bytes[i] = [[data objectAtIndex:i] integerValue];
-  }
-  NSData *payload = [[NSData alloc] initWithBytes:bytes length:[data count]];
+  NSData *payload = [self arrayToData: data];
   NSError *err = [sdk send:payload];
   if (err) {
     [self sendEventWithName:@"onError" body:@{@"message": [err localizedDescription]}];
   }
 }
 
-/*
+/**
  * sendRandom()
  *
  * Sends a random payload to the speaker.
@@ -155,6 +150,38 @@ RCT_EXPORT_METHOD(sendRandom: (NSInteger)length)
   if (err) {
     [self sendEventWithName:@"onError" body:@{@"message": [err localizedDescription]}];
   }
+}
+
+/**
+ * dataToArray
+ *
+ * Internal function to convert NSData payloads
+ * to NSArray of bytes. React Native doesn't support NSData.
+ */
+- (NSArray *)dataToArray: (NSData *) data
+{
+  Byte *bytes = (Byte*)[data bytes];
+  NSMutableArray *payload = [NSMutableArray arrayWithCapacity:data.length];
+  for (int i = 0; i < data.length; i++) {
+    [payload addObject:[NSNumber numberWithInt:bytes[i]]];
+  }
+  return [NSArray arrayWithArray:payload];
+}
+
+/**
+ * arrayToData
+ *
+ * Internal function to convert NSArray payloads
+ * to NSData. React Native doesn't support NSData.
+ */
+- (NSData *)arrayToData: (NSArray *) array
+{
+  Byte bytes[[array count]];
+  for (int i = 0; i < [array count]; i++) {
+    bytes[i] = [[array objectAtIndex:i] integerValue];
+  }
+  NSData *payload = [[NSData alloc] initWithBytes:bytes length:[array count]];
+  return payload;
 }
 
 @end

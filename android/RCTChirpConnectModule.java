@@ -13,6 +13,7 @@ import java.util.HashMap;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -55,12 +56,21 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
         return constants;
     }
 
+    /**
+     * init()
+     *
+     * Initialise the SDK with an application key and secret.
+     * Callbacks are also set up here.
+     */
     @ReactMethod
     public void init(String key, String secret) {
         chirpConnect = new ChirpConnect(this.getCurrentActivity(), key, secret, new ConnectAuthenticationStateListener() {
 
             @Override
-            public void onAuthenticationSuccess() {}
+            public void onAuthenticationSuccess() {
+                WritableMap params = Arguments.createMap();
+                context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("onAuthenticationSuccess", params);
+            }
 
             @Override
             public void onAuthenticationError(ChirpError chirpError) {
@@ -72,23 +82,13 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
 
             @Override
             public void onSending(byte[] data) {
-                String hexData = "";
-                if (data != null) {
-                    hexData = bytesToHex(data);
-                }
-                WritableMap params = Arguments.createMap();
-                params.putString("data", hexData);
+                WritableMap params = assembleData(data);
                 context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("onSending", params);
             }
 
             @Override
             public void onSent(byte[] data) {
-                String hexData = "";
-                if (data != null) {
-                    hexData = bytesToHex(data);
-                }
-                WritableMap params = Arguments.createMap();
-                params.putString("data", hexData);
+                WritableMap params = assembleData(data);
                 context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("onSent", params);
             }
 
@@ -100,12 +100,7 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
 
             @Override
             public void onReceived(byte[] data) {
-                String hexData = "";
-                if (data != null) {
-                    hexData = bytesToHex(data);
-                }
-                WritableMap params = Arguments.createMap();
-                params.putString("data", hexData);
+                WritableMap params = assembleData(data);
                 context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("onReceived", params);
             }
 
@@ -117,14 +112,15 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
             }
 
             @Override
-            public void onSystemVolumeChanged(int oldVolume, int newVolume) {
-                WritableMap params = Arguments.createMap();
-                params.putInt("volume", newVolume);
-                context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("onVolumeChanged", params);
-            }
+            public void onSystemVolumeChanged(int oldVolume, int newVolume) {}
         });
     }
 
+    /**
+     * setLicence()
+     *
+     * Configure the SDK with a licence string.
+     */
     @ReactMethod
     public void setLicence(String licence) {
         ChirpError setLicenceError = chirpConnect.setLicenceString(licence);
@@ -133,6 +129,11 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
         }
     }
 
+    /**
+     * start()
+     *
+     * Starts the SDK.
+     */
     @ReactMethod
     public void start() {
         ChirpError error = chirpConnect.start();
@@ -141,6 +142,11 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
         }
     }
 
+    /**
+     * stop()
+     *
+     * Stops the SDK.
+     */
     @ReactMethod
     public void stop() {
         ChirpError error = chirpConnect.stop();
@@ -149,6 +155,11 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
         }
     }
 
+    /**
+     * send()
+     *
+     * Sends a payload of NSData to the speaker.
+     */
     @ReactMethod
     public void send(ReadableArray data) {
         byte[] payload = new byte[data.size()];
@@ -167,6 +178,11 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
         }
     }
 
+    /**
+     * sendRandom()
+     *
+     * Sends a random payload to the speaker.
+     */
     @ReactMethod
     public void sendRandom(Integer length) {
         long payloadLength = length == 0 ? chirpConnect.getMaxPayloadLength() : length;
@@ -182,18 +198,28 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
         }
     }
 
-    private void onError(ReactContext reactContext,
-                         String error) {
+    public static WritableMap assembleData(byte[] data) {
+        WritableArray payload = Arguments.createArray();
+        for (int i = 0; i < data.length; i++) {
+            payload.pushInt(data[i]);
+        }
         WritableMap params = Arguments.createMap();
-        params.putString("message", error);
-        reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("onError", params);
+        params.putArray("data", payload);
+        return params;
     }
 
-    public static String bytesToHex(byte[] in) {
+    public static String asString(byte[] in) {
         final StringBuilder builder = new StringBuilder();
         for(byte b : in) {
             builder.append(String.format("%02x", b));
         }
         return builder.toString();
+    }
+
+    private void onError(ReactContext reactContext,
+                         String error) {
+        WritableMap params = Arguments.createMap();
+        params.putString("message", error);
+        reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("onError", params);
     }
 }
