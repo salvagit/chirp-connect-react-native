@@ -54,7 +54,7 @@ const ChirpConnectEmitter = new NativeEventEmitter(ChirpConnect);
 
 export default class App extends Component<{}> {
 
-  componentDidMount() {
+  async componentDidMount() {
 
     this.onReceived = ChirpConnectEmitter.addListener(
       'onReceived',
@@ -68,10 +68,10 @@ export default class App extends Component<{}> {
       'onError', (event) => { console.warn(event.message) }
     )
 
-    ChirpConnect.init(key, secret);
+    await ChirpConnect.init(key, secret);
     ChirpConnect.start();
 
-    ChirpConnect.sendRandom(10);
+    ChirpConnect.sendRandom();
   }
 
   componentWillUnmount() {
@@ -86,7 +86,10 @@ export default class App extends Component<{}> {
 
 ```javascript
 // Initialise the SDK.
-ChirpConnect.init(String key, String secret)
+await ChirpConnect.init(String key, String secret)
+
+// Initialise the SDK with licence (offline)
+await ChirpConnect.init(String key, String secret, String licence)
 
 // For Pro/Enterprise users, explicitly set the licence.
 ChirpConnect.setLicence(String licence)
@@ -101,7 +104,7 @@ ChirpConnect.stop()
 ChirpConnect.send(Array data)
 
 // Send a random array of bytes to the speaker
-ChirpConnect.sendRandom(Int length)
+ChirpConnect.sendRandom()
 
 // This event is called when the state of the SDK changes.
 // The event contains the following body, where the state constants are accessible from the ChirpConnect interface.
