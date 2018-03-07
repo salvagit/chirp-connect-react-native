@@ -10,7 +10,9 @@ package com.chirpconnect.rctchirpconnect;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Random;
 
+import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableArray;
@@ -18,6 +20,7 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
+import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
@@ -29,11 +32,13 @@ import io.chirp.connect.models.ChirpError;
 import io.chirp.connect.models.ConnectState;
 
 
-public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
+public class RCTChirpConnectModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
 
     private static final String TAG = "ChirpConnect";
     private ChirpConnect chirpConnect;
     private ReactContext context;
+    private boolean started = false;
+    private boolean wasStarted = false;
 
     @Override
     public String getName() {
@@ -43,6 +48,7 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
     public RCTChirpConnectModule(ReactApplicationContext reactContext) {
         super(reactContext);
         context = reactContext;
+        reactContext.addLifecycleEventListener(this);
     }
 
     @Override
@@ -57,27 +63,54 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
     }
 
     /**
-     * init()
+     * init(key, secret)
      *
      * Initialise the SDK with an application key and secret.
      * Callbacks are also set up here.
      */
     @ReactMethod
-    public void init(String key, String secret) {
+    public void init(String key, String secret, final Promise promise) {
         chirpConnect = new ChirpConnect(this.getCurrentActivity(), key, secret, new ConnectAuthenticationStateListener() {
 
             @Override
             public void onAuthenticationSuccess() {
-                WritableMap params = Arguments.createMap();
-                context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("onAuthenticationSuccess", params);
+                promise.resolve("Initialisation Success");
             }
 
             @Override
             public void onAuthenticationError(ChirpError chirpError) {
-                onError(context, chirpError.getMessage());
+                promise.reject("Authentication Error", chirpError.getMessage());
             }
         });
+        setCallbacks();
+    }
 
+    /**
+     * initWithLicence(key, secret, licence)
+     *
+     * Initialise the SDK with an application key, secret and licence.
+     * Pro/Enterprise users pass in a licence to initialise offline.
+     * Callbacks are also set up here.
+     */
+    @ReactMethod
+    public void initWithLicence(String key, String secret, String licence, Promise promise) {
+        chirpConnect = new ChirpConnect(this.getCurrentActivity(), key, secret);
+        ChirpError setLicenceError = chirpConnect.setLicenceString(licence);
+        setCallbacks();
+
+        if (setLicenceError.getCode() > 0) {
+            promise.reject("Licence Error", setLicenceError.getMessage());
+        } else {
+            promise.resolve("Initialisation Success");
+        }
+    }
+
+    /*
+     * setCallbacks()
+     *
+     * Internal method to setup callbacks.
+     */
+    private void setCallbacks() {
         chirpConnect.setListener(new ConnectEventListener() {
 
             @Override
@@ -117,7 +150,7 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
     }
 
     /**
-     * setLicence()
+     * setLicence(licence)
      *
      * Configure the SDK with a licence string.
      */
@@ -140,6 +173,7 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
         if (error.getCode() > 0) {
             onError(context, error.getMessage());
         }
+        started = true;
     }
 
     /**
@@ -153,10 +187,11 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
         if (error.getCode() > 0) {
             onError(context, error.getMessage());
         }
+        started = false;
     }
 
     /**
-     * send()
+     * send(data)
      *
      * Sends a payload of NSData to the speaker.
      */
@@ -184,14 +219,12 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
      * Sends a random payload to the speaker.
      */
     @ReactMethod
-    public void sendRandom(Integer length) {
-        long payloadLength = length == 0 ? chirpConnect.getMaxPayloadLength() : length;
-        byte[] payload = chirpConnect.randomPayload(payloadLength);
+    public void sendRandom() {
+        Random r = new Random();
+        long length = (long)r.nextInt((int)chirpConnect.getMaxPayloadLength() - 1);
+        byte[] payload = chirpConnect.randomPayload(length);
 
-        if (payloadLength < payload.length) {
-            onError(context, "Invalid payload");
-            return;
-        }
+
         ChirpError error = chirpConnect.send(payload);
         if (error.getCode() > 0) {
             onError(context, error.getMessage());
@@ -221,5 +254,24 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule {
         WritableMap params = Arguments.createMap();
         params.putString("message", error);
         reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("onError", params);
+    }
+
+    @Override
+    public void onHostResume() {
+        if (wasStarted) {
+            chirpConnect.start();
+        }
+    }
+
+    @Override
+    public void onHostPause() {
+        wasStarted = started;
+        chirpConnect.stop();
+    }
+
+    @Override
+    public void onHostDestroy() {
+        wasStarted = started;
+        chirpConnect.stop();
     }
 }

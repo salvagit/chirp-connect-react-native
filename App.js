@@ -14,22 +14,21 @@ import {
 const ChirpConnect = NativeModules.ChirpConnect;
 const ChirpConnectEmitter = new NativeEventEmitter(ChirpConnect);
 
-const key = '';
-const secret = '';
-const licence = '';
+const key = 'YOUR_CHIRP_APPLICATION_KEY';
+const secret = 'YOUR_CHIRP_APPLICATION_SECRET';
 
 export default class App extends Component<{}> {
 
   constructor(props) {
     super(props);
     this.state = {
+      'initialised': false,
       'status': 'Sleeping',
       'data': '----------'
     }
   }
 
-  componentDidMount() {
-
+  async componentDidMount() {
     this.onStateChanged = ChirpConnectEmitter.addListener(
       'onStateChanged',
       (event) => {
@@ -50,19 +49,23 @@ export default class App extends Component<{}> {
     this.onReceived = ChirpConnectEmitter.addListener(
       'onReceived',
       (event) => {
-        console.warn(event)
         if (event.data) {
           this.setState({ data: event.data });
         }
       }
     )
-    const onError = ChirpConnectEmitter.addListener(
+
+    this.onError = ChirpConnectEmitter.addListener(
       'onError', (event) => { console.warn(event.message) }
     )
 
-    ChirpConnect.init(key, secret);
-    ChirpConnect.setLicence(licence);
-    ChirpConnect.start();
+    try {
+      await ChirpConnect.init(key, secret);
+      ChirpConnect.start();
+      this.setState({ initialised: true })
+    } catch(e) {
+      console.warn(e.message);
+    }
   }
 
   componentWillUnmount() {
@@ -72,7 +75,7 @@ export default class App extends Component<{}> {
   }
 
   onPress() {
-    ChirpConnect.sendRandom();
+    ChirpConnect.send([0,1,2,3,4]);
   }
 
   render() {
@@ -87,7 +90,7 @@ export default class App extends Component<{}> {
         <Text style={styles.instructions}>
           {this.state.data}
         </Text>
-      <Button onPress={this.onPress} title='SEND' />
+      <Button onPress={this.onPress} title='SEND' disabled={!this.state.initialised} />
       </View>
     );
   }
