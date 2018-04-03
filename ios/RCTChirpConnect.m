@@ -28,35 +28,13 @@ RCT_EXPORT_MODULE();
 - (NSArray<NSString *> *)supportedEvents
 {
   return @[
-     @"onStateChanged",
-     @"onSending",
-     @"onSent",
-     @"onReceiving",
-     @"onReceived",
-     @"onError"
+    @"onStateChanged",
+    @"onSending",
+    @"onSent",
+    @"onReceiving",
+    @"onReceived",
+    @"onError"
   ];
-}
-
-/**
- * initWithLicence(key, secret, licence)
- *
- * Initialise the SDK with an application key, secret and licence string.
- * For Pro/Enterprise users to initialise offline.
- * Callbacks are also set up here.
- */
-RCT_EXPORT_METHOD(initWithLicence:(NSString *)key secret:(NSString *)secret licence:(NSString *)licence
-                         resolver:(RCTPromiseResolveBlock)resolve
-                         rejecter:(RCTPromiseRejectBlock)reject)
-{
-  sdk = [[ChirpConnect alloc] initWithAppKey:key
-                                   andSecret:secret];
-  [self setCallbacks];
-  NSError *error = [sdk setLicenceString:licence];
-  if (error) {
-    reject(@"Error", @"Licence Error", error);
-  } else {
-    resolve(@"Initialisation Success");
-  }
 }
 
 /**
@@ -65,25 +43,11 @@ RCT_EXPORT_METHOD(initWithLicence:(NSString *)key secret:(NSString *)secret lice
  * Initialise the SDK with an application key and secret.
  * Callbacks are also set up here.
  */
-RCT_EXPORT_METHOD(init:(NSString *)key secret:(NSString *)secret
-                  resolver:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXPORT_METHOD(init:(NSString *)key secret:(NSString *)secret)
 {
   sdk = [[ChirpConnect alloc] initWithAppKey:key
                                    andSecret:secret];
 
-  [self setCallbacks];
-  [sdk setAuthenticationStateUpdatedBlock:^(NSError * _Nullable error) {
-    if (error) {
-      reject(@"Error", @"Authentication Error", error);
-    } else {
-      resolve(@"Initialisation Success");
-    }
-  }];
-}
-
-- (void)setCallbacks
-{
   [sdk setShouldRouteAudioToBluetoothPeripherals:YES];
 
   [sdk setStateUpdatedBlock:^(CHIRP_CONNECT_STATE oldState,
@@ -114,6 +78,34 @@ RCT_EXPORT_METHOD(init:(NSString *)key secret:(NSString *)secret
      NSArray *payload = [self dataToArray: data];
      [self sendEventWithName:@"onReceived" body:@{@"data": payload}];
    }];
+
+  [sdk setAuthenticationStateUpdatedBlock:^(NSError * _Nullable error) {
+    if (error) {
+      [self sendEventWithName:@"onError" body:@{@"message": [error localizedDescription]}];
+    }
+  }];
+}
+
+/**
+ * getLicence()
+ *
+ * Fetch default licence from network to configure the SDK.
+ */
+RCT_EXPORT_METHOD(getLicence:(RCTPromiseResolveBlock)resolve
+                    rejecter:(RCTPromiseRejectBlock)reject)
+{
+    [sdk getLicenceStringWithCompletion:^(NSString * _Nullable licence, NSError * _Nullable error) {
+      if (error) {
+        reject(@"Error", @"Authentication Error", error);
+      } else {
+        NSError *licenceErr = [sdk setLicenceString:licence];
+        if (licenceErr) {
+          reject(@"Error", @"Licence Error", licenceErr);
+        } else {
+          resolve(@"Initialisation Success");
+        }
+      }
+    }];
 }
 
 /**

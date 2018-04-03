@@ -37,7 +37,7 @@ Add the package to the `getPackages` function
   protected List<ReactPackage> getPackages() {
     return Arrays.<ReactPackage>asList(
         new MainReactPackage(),
-        new RCTChirpConnectPackage()
+        new RCTChirpConnectPackage()  // <---
     );
   }
 ```
@@ -68,9 +68,9 @@ export default class App extends Component<{}> {
       'onError', (event) => { console.warn(event.message) }
     )
 
-    await ChirpConnect.init(key, secret);
+    ChirpConnect.init(key, secret);
+    await ChirpConnect.getLicence();
     ChirpConnect.start();
-
     ChirpConnect.sendRandom();
   }
 
@@ -86,10 +86,10 @@ export default class App extends Component<{}> {
 
 ```javascript
 // Initialise the SDK.
-await ChirpConnect.init(String key, String secret)
+ChirpConnect.init(String key, String secret)
 
-// Initialise the SDK with licence (offline)
-await ChirpConnect.init(String key, String secret, String licence)
+// For Lite users, get licence from the network
+await ChirpConnect.getLicence()
 
 // For Pro/Enterprise users, explicitly set the licence.
 ChirpConnect.setLicence(String licence)
