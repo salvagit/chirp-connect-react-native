@@ -45,16 +45,30 @@ Add the package to the `getPackages` function
 
 ## Application
 
-Now the setup is complete, you can add ChirpConnect to your React Native application. In App.js
+Now the setup is complete, you can add ChirpConnect to your React Native application.
+You can use the `react-native-permissions` package to ensure that microphone permissions
+have been granted.
+
+```bash
+yarn add react-native-permissions
+```
+
+In App.js
 
 ```javascript
 import { NativeEventEmitter, NativeModules } from 'react-native';
+import Permissions from 'react-native-permissions';
+
 const ChirpConnect = NativeModules.ChirpConnect;
 const ChirpConnectEmitter = new NativeEventEmitter(ChirpConnect);
 
 export default class App extends Component<{}> {
 
   async componentDidMount() {
+    const response = await Permissions.check('microphone')
+    if (response !== 'authorized') {
+      await Permissions.request('microphone')
+    }
 
     this.onReceived = ChirpConnectEmitter.addListener(
       'onReceived',
@@ -69,7 +83,7 @@ export default class App extends Component<{}> {
     )
 
     ChirpConnect.init(key, secret);
-    await ChirpConnect.getLicence();
+    await ChirpConnect.setConfigFromNetwork();
     ChirpConnect.start();
     ChirpConnect.sendRandom();
   }
@@ -88,11 +102,11 @@ export default class App extends Component<{}> {
 // Initialise the SDK.
 ChirpConnect.init(String key, String secret)
 
-// For Lite users, get licence from the network
-await ChirpConnect.getLicence()
+// Set default configuration from the network
+await ChirpConnect.setConfigFromNetwork()
 
-// For Pro/Enterprise users, explicitly set the licence.
-ChirpConnect.setLicence(String licence)
+// Explicitly set the config string
+await ChirpConnect.setConfig(String config)
 
 // Start the SDK
 ChirpConnect.start()
