@@ -266,7 +266,7 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule implements
 
     @Override
     public void onHostResume() {
-        if (wasStarted) {
+        if (chirpConnect && wasStarted) {
             chirpConnect.start();
         }
     }
@@ -274,7 +274,9 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule implements
     @Override
     public void onHostPause() {
         wasStarted = started;
-        chirpConnect.stop();
+        if (chirpConnect) {
+            chirpConnect.stop();
+        }
     }
 
     @Override
