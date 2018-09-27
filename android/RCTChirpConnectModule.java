@@ -47,7 +47,7 @@ import io.chirp.connect.models.ConnectState;
 public class RCTChirpConnectModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
 
     private static final String TAG = "ChirpConnect";
-    private ChirpConnect chirpConnect;
+    private ChirpConnect chirpConnect = null;
     private ReactContext context;
     private boolean isStarted = false;
 
@@ -267,14 +267,14 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule implements
 
     @Override
     public void onHostResume() {
-        if (chirpConnect && isStarted) {
+        if (chirpConnect != null && isStarted) {
             chirpConnect.start();
         }
     }
 
     @Override
     public void onHostPause() {
-        if (chirpConnect) {
+        if (chirpConnect != null) {
             chirpConnect.stop();
         }
     }
