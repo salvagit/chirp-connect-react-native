@@ -281,8 +281,8 @@ public class RCTChirpConnectModule extends ReactContextBaseJavaModule implements
 
     @Override
     public void onHostDestroy() {
-        try {
+        if (chirpConnect != null) {
             chirpConnect.close();
-        } catch(IOException err) {}
+        }
     }
 }
